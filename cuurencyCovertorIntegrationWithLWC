@@ -1,0 +1,120 @@
+//Rest Integration:- Currency Convertor With LWC
+
+
+//httpCallout.html:-
+<template>
+    <lightning-card title="Live Currency Converter" 
+      icon-name="custom:custom15">
+      <div class="slds-p-around_medium">
+          <lightning-combobox
+              name="sourceCurrency"
+              label="Select Source Currency"
+              value={sourceCurrency}
+              placeholder="Select Source Currency"
+              options={options} 
+              onchange={handleSourceChange}></lightning-combobox>
+          
+          <div class="row">
+              <lightning-input name="amount" 
+                  label="Enter Amount" value={amount}
+                  onchange={handleAmountChange}></lightning-input>
+          </div>
+
+          <lightning-combobox
+              name="targetCurrency"
+              label="Select Target Currency"
+              value={targetCurrency}
+              placeholder="Select Target Currency"
+              options={options}
+              onchange={handleTargetChange}></lightning-combobox>
+
+          <div class="slds-m-top_small slds-m-bottom_medium">
+              <h2 class="slds-text-heading_small slds-m-bottom_small">
+                  <lightning-button variant="brand" 
+                      label="Convert" title="Convert" 
+                      onclick={handleConvert}></lightning-button>
+              </h2>
+          </div>
+      
+          <div class="row">
+              <lightning-input name="convertedAmount" label="Converted Amount" 
+                  value={convertedAmount}></lightning-input>
+          </div>
+      </div>
+  </lightning-card>
+</template>
+
+
+
+
+
+//httpCallout.js
+import { LightningElement,track } from 'lwc';
+import convert from '@salesforce/apex/CurrencyConversioncontroller.convert';
+
+export default class HttpCallout extends LightningElement {
+    sourceCurrency = 'USD';
+    targetCurrency = 'INR';
+    amount = '';
+   @track convertedAmount;
+
+  get options() {
+    return [
+        { label: 'US Dollar', value: 'USD' },
+        { label: 'Great Britian Pound', value: 'GBP' },
+        { label: 'Indian Rupee', value: 'INR' }
+    ];
+  }
+
+  handleSourceChange(event) {
+    this.sourceCurrency = event.detail.value;
+  }
+
+  handleTargetChange(event) {
+    this.targetCurrency = event.detail.value;
+  }
+
+  handleAmountChange(event) {
+    this.amount = event.detail.value;
+  }
+  
+  handleConvert(event) {
+    convert({sourceCurrency:this.sourceCurrency, 
+              targetCurrency:this.targetCurrency, 
+              amount: this.amount}).then(result => {
+        this.convertedAmount = result;
+    });
+  }
+}
+
+
+
+//CurrencyConversioncontroller.cls
+/**
+* @File Name : CurrencyConversioncontroller.cls
+* @Description :
+* @Author :  Ahshan Ali
+* @Last Modified By :
+* @Last Modified On : September 29, 2024
+* @Modification Log :
+*==============================================================================
+* Ver | Date | Author | Modification
+*==============================================================================
+* 1.0 | September 29, 2024 |   | Initial Version
+**/
+
+public class CurrencyConversioncontroller {
+	@AuraEnabled(cacheable=true)
+    public static double convert(string sourceCurrency, string targetCurrency, string amount) {
+        HttpRequest req = new HttpRequest();
+        HttpResponse res = new HttpResponse();
+        Http http = new Http();
+        string today = String.valueOf(System.today());
+        req.setEndpoint('https://api.apilayer.com/currency_data/convert?to='+targetCurrency+'&from='+sourceCurrency+'&amount='+amount+'&date='+today);
+        req.setMethod('GET');
+        req.setHeader('apikey', 'wRKrLFVzFcgj94OnYYpcWHDPEwtndQp4');
+        res = http.send(req);
+        Map<string, object> responseMap = (Map<string, object>) JSON.deserializeUntyped(res.getbody());
+        return (double) responseMap.get('result');
+    }
+}
